@@ -1,4 +1,4 @@
-# Text Mining: An introduction
+# Text Mining: Conceitos e Práticas usando R
 
 Esta apresentação foi realizada na LIVE do canal Emerging Code no YouTube: [link](https://www.youtube.com/watch?v=oip2dUGKB-s).
 
