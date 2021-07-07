@@ -1,0 +1,47 @@
+---
+title: "Pre-processing"
+output: html_notebook
+---
+
+```{r, message=FALSE}
+if(!require(quanteda)) install.packages("quanteda")
+library(quanteda)
+```
+
+## Texto Original
+
+```{r}
+farfetch_wikipedia <- "Farfetch é uma empresa de e-commerce de moda de luxo nacional e internacional que vende marcas famosas e moda premium atual para comprar online. O site foi fundado em 2008 pelo empresário português José Neves, e a empresa tem sede fiscal em Londres e principais filiais em Porto, Guimarães, Lisboa, Nova Iorque, Los Angeles, Tóquio, Xangai e São Paulo. A Farfetch trabalha em parceria com boutiques independentes em um modelo baseado em comissão, vantajoso para ambas as partes, uma vez que as vendas online representam em média, 30% do total vendido pelas boutiques. A empresa opera em diversos mercados internacionais com sites no idioma local, como inglês, francês, japonês, mandarim, português, coreano, alemão, russo e espanhol. Desde maio de 2015, a Farfetch conta com mais de 1000 funcionários globalmente."
+
+farfetch_revista_exame <- "A Farfetch foi lançada em outubro de 2008, no início da crise mundial causada pela bolha imobiliária dos Estados Unidos, por José Neves, empreendedor português baseado em Londres. O timing não poderia ser pior, mas Neves desde o princípio orientou o negócio para atender os consumidores das marcas mais exclusivas do mundo — e, como costumam dizer os que lidam com o mercado de luxo, nesse segmento não há crise. Podia ser verdade ou pensamento positivo, mas a Farfetch cresceu de maneira espetacular enquanto os países mais ricos do mundo entravam na pior crise em um século. A empresa deve vender 340 milhões de dólares neste ano, quase o dobro de 2013.O valor reflete as transações feitas no site — a Farfetch fica com uma porcentagem a título de comissão e serviço. A Farfetch está mais próxima de uma plataforma de transações, como um eBay ou um MercadoLivre, do que de uma pura loja virtual, como a Amazon, mas as coisas são um pouco mais complicadas do que isso."
+corpus <- c(farfetch_wikipedia, farfetch_revista_exame)
+corpus
+```
+
+## Tokenização
+```{r}
+tok <- tokens(corpus)
+tok
+```
+## Remover pontuação, números e símbolos
+```{r}
+tok <- tokens(tok, 
+              remove_numbers = TRUE, ## Remove números
+              remove_punct = TRUE,   ## Remove pontos, virgulas, ponto e virgula 
+              remove_symbols = TRUE) ## Remove símbolos
+tok
+```
+
+## Remover stopwords
+```{r}
+
+
+tok <- tokens_remove(tok, stopwords("portuguese"))
+tok
+```
+
+## Bag of Words
+```{r}
+bow <- dfm(tok)
+head(t(bow), 20)
+```

@@ -1,0 +1,446 @@
+---
+title: "Demo: Análise de tweets dos principais canais de Futebol do Brasil"
+output: html_notebook
+---
+
+## Instalar pacotes
+
+```{r, message=FALSE}
+# Instala pacotes caso ainda não tenham sido instalados
+if(!require(dplyr)) install.packages("dplyr")  # Manipulação de dados
+if(!require(ggplot2)) install.packages("ggplot2") # Visualização de dados
+if(!require(httpuv)) install.packages("httpuv")  # Suporte a HTTP e WebSocket
+if(!require(lexiconPT)) install.packages("lexiconPT")  # Análise de Sentimento
+if(!require(rtweet)) install.packages("rtweet")  # Cliente para Twitter Search API
+if(!require(tidytext)) install.packages("tidytext") # Mineração de textos
+if(!require(wordcloud)) install.packages("wordcloud") # Visualização de textos
+```
+
+## Carregar todos os pacotes
+
+```{r, message=FALSE}
+library("dplyr")  		# Manipulação de dados
+library("ggplot2")		# Visualização de dados
+library("httpuv")  		# Suporte a HTTP e WebSocket
+library("lexiconPT")  # Análise de Sentimento
+library("rtweet")  		# Cliente para Twitter Search API
+library("tidytext") 	# Mineração de textos
+library("wordcloud") 	# Visualização de textos
+```
+
+
+
+## Criar app no Twitter
+
+1) Acesse https://apps.twitter.com e crie um novo aplicativo.
+2) A fim demostração, no campo `Website` colocarmos a URL do nosso perfil do Twitter.  
+3) No campo `Callback URL` preencher com: http://127.0.0.1:1410
+4) Aceite os termos e clique em "Create your Twitter application".
+5) Vá em "Keys and Access Tokens" e anote os valores dos campos `Consumer Key`, `Consumer Secret`. Eles serão utilizados para autenticação abaixo.
+
+* (Ob.: Pode ser que o Twitter peça para incluir o número do seu celular, antes de criar o seu aplicativo. Só seguir as instruções: https://support.twitter.com/articles/270426.)
+
+```{r}
+## Nome do seu aplicativo (o mesmo criado na etapa anterior)
+nomeAplicativo <- "nomeAplicativo" # <- altere aqui
+## Consumer Key (API Key)
+chaveAPI <- "chaveAPI" # <- altere aqui
+## Consumer Secret (API Secret)
+chaveSecreta <- "chaveSecreta" # <- altere aqui
+## Criar token para o app
+# twitter_token <- create_token(app = nomeAplicativo, 
+#                              consumer_key = chaveAPI, 
+#                              consumer_secret = chaveSecreta)
+```
+
+## Coleta de dados
+
+Vamos coletar e preparar os dados dos *tweets* dos 4 maiores canais de Futebol do Brasil (GE Globo, Sport TV, Fox Sports e ESPN).
+Para isso, vou:
+
+1) Definir a lista de canais
+2) Fazer requisição à Search API do Twitter
+3) Consolidar as requisições em uma única tabela
+4) Selecionar colunas de interesse
+5) Salvar dados para uso posterior
+
+```{r, message=FALSE}
+# 0) Carregar dados para evitar consulta ao Twitter (Extração feita no dia 29/04/2019)
+# Caso queira fazer uma nova pesquisa, comente a linha abaixo e descomente as linhas 80 e 95
+load("tweets_canais_Brasil_06_07_2021.RData")
+
+# 1) Definir a lista de canais
+# canais <- c("@geglobo", "@SporTV", "@FoxSportsBrasil", "@ESPNBrasil")
+
+# 2) Fazer a requisição à Search API do Twitter
+# Extrai 200 tweets sobre cada canal especificado, totalizando 800 tweets
+# * Caso queira extrair os tweets, descomente a linha 95 abaixo
+# tweets <- lapply(canais, search_tweets, n = 200, token = twitter_token)
+
+# 3) Consolidar as requisições em uma única tabela
+tw_GEGlobo <- tweets[[1]] %>%
+  mutate(canal = "GEGlobo")
+tw_sportTV  <- tweets[[2]] %>%
+  mutate(canal = "sportTV")
+tw_FoxSports  <- tweets[[3]] %>%
+  mutate(canal = "FoxSports")
+tw_ESPN <- tweets[[4]] %>%
+  mutate(canal = "ESPN")
+tweets_canais_esportes <- rbind(tw_GEGlobo, tw_sportTV, tw_FoxSports, tw_ESPN)
+# 4) Selecionar colunas de interesse
+tweets_canais_esportes <- tweets_canais_esportes %>%
+  select(canal, text, created_at)
+
+# 5) Salvar dados para uso posterior
+# save(tweets, tweets_canais_esportes, file = "tweets_canais_Brasil_06_07_2021.RData") # Salvar para uso posterior
+```
+
+## Pré-processamento
+
+Conforme é possível visualizar nos resultados abaixo, na primeira grid fica em destaque termos como "o", "https", "da", que não são termos relavantes para o contexto. 
+
+```{r}
+top_words <- tweets_canais_esportes %>%
+  unnest_tokens(term, text) %>%
+  count(canal, term, sort = TRUE)
+
+top_words
+```
+
+Desta forma, é preciso realizar o pré-processamento, limpando os termos não relevantes.
+
+```{r}
+stop_words <- get_stopwords("portuguese")
+
+stop_words <- rbind(stop_words, list(c("https", "t.co"), c("added", "added")))
+stop_words <- rbind(stop_words, list(c("geglobo", "sportv"), c("added", "added")))
+stop_words <- rbind(stop_words, list(c("foxsportsbrasil", "espnbrasil"), c("added", "added")))
+
+top_clean_words <- top_words %>%
+  anti_join(stop_words, by = c("term" = "word"))
+
+top_clean_words
+```
+
+
+## Nuvens de palavras (wordclouds)
+
+Vamos contar a ocorrência de palavras para cada canal e depois montar uma nuvem de palavras de cada canal.
+
+
+### FC GEGlobo
+```{r, warning=FALSE}
+top_GEGlobo <- top_clean_words %>%
+  filter(canal == "GEGlobo")
+  
+wordcloud(top_GEGlobo$term, top_GEGlobo$n, colors = brewer.pal(8, "Dark2"))
+```
+
+### SL sportTV
+```{r, warning=FALSE}
+top_sportTV <- top_clean_words %>%
+  filter(canal == "sportTV")
+  
+wordcloud(top_sportTV$term, top_sportTV$n, colors = brewer.pal(8, "Dark2"))
+```
+### FoxSports
+```{r, warning=FALSE}
+top_FoxSports <- top_clean_words %>%
+  filter(canal == "FoxSports")
+  
+wordcloud(top_FoxSports$term, top_FoxSports$n, colors = brewer.pal(8, "Dark2"))
+```
+
+### ESPN
+```{r, warning=FALSE}
+top_ESPN <- top_clean_words %>%
+  filter(canal == "ESPN")
+  
+wordcloud(top_ESPN$term, top_ESPN$n, colors = brewer.pal(8, "Dark2"))
+```
+
+## Análise de Sentimento
+
+Em cada palavra carrega consigo um sentimento que pode ser bom (1), neutro (0) ou ruim (-1). 
+Vou ver o sentimento transmitidos por algumas palavras.
+```{r}
+dicio <- oplexicon_v3.0 # Carrega dicionário de sentimentos
+
+# Cinco palavras aleatórias
+dicio[sample(1:nrow(dicio), 5) ,]
+```
+
+### FC GEGlobo
+
+```{r, message=FALSE}
+# Análise de sentimento dos tweets referentes ao GEGlobo
+sentimento_GEGlobo <- tweets_canais_esportes %>%
+  filter(canal == "GEGlobo") %>%  # Apenas tweets referentes ao GEGlobo
+  unnest_tokens(term, text) %>%       # Quebra os tweets em palavras
+  inner_join(dicio) %>%
+  anti_join(stop_words, by = c("term" = "word")) %>%
+  count(term, polarity, sort = TRUE) %>%
+  ungroup()
+
+sentimento_GEGlobo
+```
+
+### Sport TV
+
+```{r, message=FALSE}
+# Análise de sentimento dos tweets referentes ao SportTV
+sentimento_sportTV <- tweets_canais_esportes %>%
+  filter(canal == "sportTV") %>%  # Apenas tweets referentes ao SportTV
+  unnest_tokens(term, text) %>%     # Quebra os tweets em palavras
+  inner_join(dicio) %>%
+  anti_join(stop_words, by = c("term" = "word")) %>%
+  count(term, polarity, sort = TRUE) %>%
+  ungroup()
+
+sentimento_sportTV
+```
+
+### FoxSports
+
+```{r, message=FALSE}
+# Análise de sentimento dos tweets referentes ao FoxSports
+sentimento_FoxSports <- tweets_canais_esportes %>%
+  filter(canal == "FoxSports") %>%  # Apenas tweets referentes ao FoxSports
+  unnest_tokens(term, text) %>%     # Quebra os tweets em palavras
+  inner_join(dicio) %>%
+  anti_join(stop_words, by = c("term" = "word")) %>%
+  count(term, polarity, sort = TRUE) %>%
+  ungroup()
+
+sentimento_FoxSports
+```
+
+
+### SC ESPN
+
+```{r, message=FALSE}
+# Análise de sentimento dos tweets referentes ao SC ESPN
+sentimento_ESPN <- tweets_canais_esportes %>%
+  filter(canal == "ESPN") %>%  # Apenas tweets referentes ao SC ESPN
+  unnest_tokens(term, text) %>%     # Quebra os tweets em palavras
+  inner_join(dicio) %>%  
+  anti_join(stop_words, by = c("term" = "word")) %>%
+  count(term, polarity, sort = TRUE) %>%
+  ungroup()
+
+sentimento_ESPN
+```
+
+### Sentimento Geral
+```{r, message = FALSE}
+tweets_canais_esportes %>%
+  unnest_tokens(term, text) %>%
+  anti_join(stop_words, by = c("term" = "word")) %>%
+  inner_join(dicio) %>%
+  group_by(canal) %>%
+  summarise(sum(polarity)) %>%
+  ggplot(aes(canal, `sum(polarity)`, fill = canal)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  labs(x = "Canais", y = "Sentimento")
+```
+
+## Calculando a Frequência das Palavras (TF)
+
+
+Vamos calcular a frequência das palavras dentro dos Twitters dos canais: 
+
+```{r, message=FALSE}
+texto_canais <- tweets_canais_esportes %>%
+  unnest_tokens(termo, text) %>%
+  count(canal, termo, sort = TRUE) %>%
+  ungroup()
+total_texto_canais <- texto_canais %>% 
+  group_by(canal) %>% 
+  summarize(total = sum(n))
+texto_canais <- left_join(texto_canais, total_texto_canais)
+texto_canais
+```
+
+
+Agora, realizarmos o calculo da Frequencia dos Termos (TF) por canal:
+
+```{r}
+tf_texto_canais_by_rank <- texto_canais %>% 
+  group_by(canal) %>% 
+  mutate(rank = row_number(), 
+         `TF` = n/total)
+tf_texto_canais_by_rank
+```
+
+E por fim, um plot com os termos:
+
+```{r, message=FALSE}
+plot_canais_tf <- tf_texto_canais_by_rank %>%
+  ungroup(tf_texto_canais_by_rank) %>%
+  arrange(desc(TF)) %>%
+  mutate(termo = factor(termo, levels = rev(unique(termo))))
+plot_canais_tf %>% 
+  top_n(20) %>%
+  ggplot(aes(termo, TF, fill = canal)) +
+  scale_fill_manual(values=c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  geom_col() +
+  labs(x = NULL, y = "Frequencia dos Termos (TF)") +
+  coord_flip()
+```
+
+
+## Calculando a Freqüência Inversa no Documento (IDF)
+
+Sparck Jones desenvolveu uma interpretação estatística da especificidade  dos  termos  (1972),  chamada de IDF. 
+
+```{r}
+texto_canais_tf_idf <- texto_canais %>%
+  bind_tf_idf(termo, canal, n)
+
+texto_canais_tf_idf
+```
+
+
+```{r, message=FALSE}
+plot_canais_idf <- texto_canais_tf_idf %>%
+  ungroup(texto_canais_tf_idf) %>%
+  arrange(desc(idf)) %>%
+  mutate(termo = factor(termo, levels = rev(unique(termo))))
+
+plot_canais_idf %>% 
+  top_n(20) %>%
+  ggplot(aes(termo, idf, fill = canal)) +
+  scale_fill_manual(values=c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  geom_col() +
+  labs(x = NULL, y = "Freqüência Inversa no Documento (IDF)") +
+  coord_flip()
+```
+
+
+## Calculando a ponderação TF-IDF
+
+```{r}
+texto_canais_tf_idf %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+```
+
+
+```{r, message=FALSE}
+plot_canais_tf_idf <- texto_canais_tf_idf %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(termo = factor(termo, levels = rev(unique(termo))))
+plot_canais_tf_idf %>% 
+  top_n(20) %>%
+  ggplot(aes(termo, tf_idf, fill = canal)) +
+  scale_fill_manual(values=c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  geom_col() +
+  labs(x = NULL, y = "tf-idf") +
+  coord_flip()
+```
+
+
+
+Agora, para cada canal: 
+
+
+```{r, message=FALSE}
+plot_canais_tf_idf %>% 
+  group_by(canal) %>% 
+  top_n(15) %>% 
+  ungroup %>%
+  ggplot(aes(termo, tf_idf, fill = canal)) +
+  scale_fill_manual(values=c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~canal, ncol = 2, scales = "free") +
+  coord_flip()
+```
+
+
+## Bigrama
+
+Abaixo, vamos obter os Bigramas dos tweets: 
+
+```{r}
+bigramas_tweets_canais_esportes <- tweets_canais_esportes %>%
+  unnest_tokens(bigrama, text, token = "ngrams", n = 2)
+
+bigramas_tweets_canais_esportes
+```
+
+Recalculando o TF-IDF com o Bigrama: 
+
+```{r, message=FALSE}
+bigramas_tweets_texto_canais <- bigramas_tweets_canais_esportes %>%
+  count(canal, bigrama, sort = TRUE) %>%
+  ungroup()
+total_bigramas_tweets_texto_canais <- bigramas_tweets_texto_canais %>% 
+  group_by(canal) %>% 
+  summarize(total = sum(n))
+bigramas_tweets_texto_canais <- left_join(bigramas_tweets_texto_canais, total_bigramas_tweets_texto_canais)
+bigramas_tweets_texto_canais_tf_idf <- bigramas_tweets_texto_canais %>%
+  bind_tf_idf(bigrama, canal, n)
+bigramas_tweets_texto_canais_tf_idf %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+```
+
+Vamos fazer um plot para cada canal: 
+
+```{r, message=FALSE}
+plot_canais_tf_idf_bigrama <- bigramas_tweets_texto_canais_tf_idf %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(bigrama = factor(bigrama, levels = rev(unique(bigrama))))
+plot_canais_tf_idf_bigrama %>% 
+  group_by(canal) %>% 
+  top_n(15) %>% 
+  ungroup %>%
+  ggplot(aes(bigrama, tf_idf, fill = canal)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "TF-IDF dos Bigramas por Canal") +
+  scale_fill_manual(values=c("#da1010", "#060606", "#1e5b3c", "#3db0f7")) +
+  facet_wrap(~canal, ncol = 2, scales = "free") +
+  coord_flip()
+```
+
+Visualização com nuvem de palavras das 100 bigramas com maior tf-idf de cada canal: 
+
+### GEGlobo
+```{r, warning=FALSE}
+top_GEGlobo_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
+  filter(canal == "GEGlobo")
+  
+wordcloud(top_GEGlobo_bigramas_tf_idf$bigrama[!is.na(top_GEGlobo_bigramas_tf_idf$tf_idf)], top_GEGlobo_bigramas_tf_idf$tf_idf[!is.na(top_GEGlobo_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
+```
+
+### SL sportTV
+```{r, warning=FALSE}
+top_sportTV_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
+  filter(canal == "sportTV")
+  
+wordcloud(top_sportTV_bigramas_tf_idf$bigrama[!is.na(top_sportTV_bigramas_tf_idf$tf_idf)], top_sportTV_bigramas_tf_idf$tf_idf[!is.na(top_sportTV_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
+```
+
+### FoxSports
+```{r, warning=FALSE}
+top_FoxSports_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
+  filter(canal == "FoxSports")
+  
+wordcloud(top_FoxSports_bigramas_tf_idf$bigrama[!is.na(top_FoxSports_bigramas_tf_idf$tf_idf)], top_FoxSports_bigramas_tf_idf$tf_idf[!is.na(top_FoxSports_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
+```
+
+### ESPN
+```{r, warning=FALSE}
+top_ESPN_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
+  filter(canal == "ESPN" & !is.na(bigrama))
+  
+wordcloud(top_ESPN_bigramas_tf_idf$bigrama[!is.na(top_ESPN_bigramas_tf_idf$tf_idf)], top_ESPN_bigramas_tf_idf$tf_idf[!is.na(top_ESPN_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
+```
+
+
+## Referências
+
+- [Cliente R para API do Twitter](https://github.com/mkearney/rtweet)
+- [Text Mining With R](http://tidytextmining.com/)
