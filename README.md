@@ -78,3 +78,4 @@ Depois, abra os arquivos das demonstrações (preproc.Rmd e DemoCanalFutebol.Rmd
 ## Referências
 - [Cliente R para API do Twitter](https://github.com/mkearney/rtweet)
 - [Text Mining With R](http://tidytextmining.com/)
+- [Introdução à Mineração de Textos - By Andrei Martins e Charles Mendes](https://github.com/MackMendes/MineracaoTexto-Nerdzao)

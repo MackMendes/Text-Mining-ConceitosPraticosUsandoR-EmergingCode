@@ -128,7 +128,7 @@ top_clean_words
 Vamos contar a ocorrência de palavras para cada canal e depois montar uma nuvem de palavras de cada canal.
 
 
-### FC GEGlobo
+### GE Globo
 ```{r, warning=FALSE}
 top_GEGlobo <- top_clean_words %>%
   filter(canal == "GEGlobo")
@@ -143,7 +143,7 @@ top_sportTV <- top_clean_words %>%
   
 wordcloud(top_sportTV$term, top_sportTV$n, colors = brewer.pal(8, "Dark2"))
 ```
-### FoxSports
+### Fox Sports
 ```{r, warning=FALSE}
 top_FoxSports <- top_clean_words %>%
   filter(canal == "FoxSports")
@@ -170,7 +170,7 @@ dicio <- oplexicon_v3.0 # Carrega dicionário de sentimentos
 dicio[sample(1:nrow(dicio), 5) ,]
 ```
 
-### FC GEGlobo
+### GE Globo
 
 ```{r, message=FALSE}
 # Análise de sentimento dos tweets referentes ao GEGlobo
@@ -200,12 +200,12 @@ sentimento_sportTV <- tweets_canais_esportes %>%
 sentimento_sportTV
 ```
 
-### FoxSports
+### Fox Sports
 
 ```{r, message=FALSE}
-# Análise de sentimento dos tweets referentes ao FoxSports
+# Análise de sentimento dos tweets referentes ao Fox Sports
 sentimento_FoxSports <- tweets_canais_esportes %>%
-  filter(canal == "FoxSports") %>%  # Apenas tweets referentes ao FoxSports
+  filter(canal == "FoxSports") %>%  # Apenas tweets referentes ao Fox Sports
   unnest_tokens(term, text) %>%     # Quebra os tweets em palavras
   inner_join(dicio) %>%
   anti_join(stop_words, by = c("term" = "word")) %>%
@@ -216,12 +216,12 @@ sentimento_FoxSports
 ```
 
 
-### SC ESPN
+### ESPN
 
 ```{r, message=FALSE}
-# Análise de sentimento dos tweets referentes ao SC ESPN
+# Análise de sentimento dos tweets referentes ao ESPN
 sentimento_ESPN <- tweets_canais_esportes %>%
-  filter(canal == "ESPN") %>%  # Apenas tweets referentes ao SC ESPN
+  filter(canal == "ESPN") %>%  # Apenas tweets referentes ao ESPN
   unnest_tokens(term, text) %>%     # Quebra os tweets em palavras
   inner_join(dicio) %>%  
   anti_join(stop_words, by = c("term" = "word")) %>%
@@ -407,7 +407,7 @@ plot_canais_tf_idf_bigrama %>%
 
 Visualização com nuvem de palavras das 100 bigramas com maior tf-idf de cada canal: 
 
-### GEGlobo
+### GE Globo
 ```{r, warning=FALSE}
 top_GEGlobo_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
   filter(canal == "GEGlobo")
@@ -415,7 +415,7 @@ top_GEGlobo_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
 wordcloud(top_GEGlobo_bigramas_tf_idf$bigrama[!is.na(top_GEGlobo_bigramas_tf_idf$tf_idf)], top_GEGlobo_bigramas_tf_idf$tf_idf[!is.na(top_GEGlobo_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
 ```
 
-### SL sportTV
+### SportTV
 ```{r, warning=FALSE}
 top_sportTV_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
   filter(canal == "sportTV")
@@ -423,7 +423,7 @@ top_sportTV_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
 wordcloud(top_sportTV_bigramas_tf_idf$bigrama[!is.na(top_sportTV_bigramas_tf_idf$tf_idf)], top_sportTV_bigramas_tf_idf$tf_idf[!is.na(top_sportTV_bigramas_tf_idf$tf_idf)], colors = brewer.pal(8, "Dark2"), max.words= 100)
 ```
 
-### FoxSports
+### Fox Sports
 ```{r, warning=FALSE}
 top_FoxSports_bigramas_tf_idf <- bigramas_tweets_texto_canais_tf_idf %>%
   filter(canal == "FoxSports")
@@ -444,3 +444,4 @@ wordcloud(top_ESPN_bigramas_tf_idf$bigrama[!is.na(top_ESPN_bigramas_tf_idf$tf_id
 
 - [Cliente R para API do Twitter](https://github.com/mkearney/rtweet)
 - [Text Mining With R](http://tidytextmining.com/)
+- [Introdução à Mineração de Textos - By Andrei Martins e Charles Mendes](https://github.com/MackMendes/MineracaoTexto-Nerdzao)
